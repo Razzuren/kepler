@@ -1,73 +1,98 @@
 %%% cd ("Z:/Google Drive/Codigos/ProcessamentoParalelo/TrabII").
 
 -module(kepler).
--export([discovery/0, loop/2, generate/2, oxygen/2, hydrogen/2,makeWater/3]).
+-export([discovery/0, loop/1, generate/1, oxygen/1, hydrogen/1, water/2]).
 
-loop(HydrogenList, OxygenList) ->
+%%Loop principal
+loop(WaterPid) ->
 
     %% Define o intervalo de tempo entre o surgimento
-    %% de novas moleculas em milisegundos (minimo,máximo)
-    timer:sleep(crypto:rand_uniform(1000,1001)),
+    %% de novas moléculas em milisegundos (minimo,máximo)
+    timer:sleep(crypto:rand_uniform(1000,10001)),
 
-    Generator = spawn(kepler,generate,[HydrogenList,OxygenList]),
+    Generator = spawn(kepler,generate,[WaterPid]),
     Generator ! {crypto:rand_uniform(1,3)}.
 
-
-generate(HydrogenList,OxygenList) ->
+%%Função que gera aleatoriamente
+%% moléculas de Oxigênio ou Hidrogênio
+generate(WaterPid) ->
     receive
         {1} ->
-            [spawn(kepler,oxygen,[HydrogenList,OxygenList])];
+            [spawn(kepler,oxygen,[WaterPid])];
 
         {2} ->
-            [spawn(kepler,hydrogen,[HydrogenList,OxygenList])]
+            [spawn(kepler,hydrogen,[WaterPid])]
     end.
 
-oxygen(HydrogenList,OxygenList) ->
+%%Função Oxigênio
+oxygen(WaterPid) ->
     Pid = self(),
-    io:format("Oxigênio ~p foi gerado !~n",[self()]),
-    timer:sleep(crypto:rand_uniform(1000,1001)),
-    NewOxygenList = OxygenList ++ [Pid],
-    loop(HydrogenList,NewOxygenList).
-    
+    io:format("Oxigênio ~p foi gerado !~n~n",[self()]),
+    loop(WaterPid),
+    timer:sleep(crypto:rand_uniform(10000,30001)),
+    WaterPid ! {Pid,oxygen}.
 
-hydrogen(HydrogenList,OxygenList) ->
+%%Função Hidrogênio
+hydrogen(WaterPid) ->
     Pid = self(),
-    io:format("Hidrogênio ~p foi gerado !~n",[self()]),
-    timer:sleep(crypto:rand_uniform(1000,1001)),
-    NewHydrogenList = HydrogenList ++ [Pid],
+    io:format("Hidrogênio ~p foi gerado !~n~n",[self()]),
+    loop(WaterPid),
+    timer:sleep(crypto:rand_uniform(10000,30001)),
+    WaterPid ! {Pid,hydrogen}.
 
-    Length = lists:flatlength(NewHydrogenList),
+%%Função que combina as moléculas
+water(HydrogenList,OxygenList) ->
+
+    Length = lists:flatlength(HydrogenList),
     Lenght2 = lists:flatlength(OxygenList),
 
     if
+        %%Se há dois higrogênios prontos para reagir
         Length >= 2  ->
+
             if
+                %%Se há ao menos 1 oxigênio para reagir
                 Lenght2 >=1 ->
-                    H1 = lists:sublist(NewHydrogenList,1,1),
-                    H2 = lists:sublist(NewHydrogenList,2,2),
+
+                    %%Moléculas que irão Reagir
+                    H1 = lists:sublist(HydrogenList,1,1),
+                    H2 = lists:sublist(HydrogenList,2,2),
                     O = lists:sublist(OxygenList,1,1),
 
-                    Temp = lists:droplast(NewHydrogenList),
-                    CleanHydrogenList = lists:droplast(Temp),
-                    Temp2 = lists:reverse(OxygenList),
-                    Temp3 = lists:droplast(Temp2),
-                    CleanOxygenList = lists:reverse(Temp3),
+                    %%Remove as moléculas de suas listas
+                    TempHydrogen = lists:droplast(HydrogenList),
+                    CleanHydrogenList = lists:droplast(TempHydrogen),
+                    TempOxygen = lists:droplast(OxygenList),
+                    CleanOxygenList = lists:reverse(TempOxygen),
 
-                    spawn(kepler,makeWater,[H1,H2,O]),
+                    io:format("Os Hidrogênios ~p e ~p ~n reagiram com Oxigênio ~p gerando água.~n~n",[[H1],[H2],[O]]),
 
-                    loop(CleanHydrogenList,CleanOxygenList);
+                    %%Loop da Geração de Água
+                    water(CleanHydrogenList,CleanOxygenList);
 
                 true ->
-                    loop(NewHydrogenList,OxygenList)
+                    io:format("~n",[])
             end;
         true ->
-            loop(NewHydrogenList,OxygenList)
+            io:format("~n",[])
+
+    end,
+
+    receive
+        {Element,oxygen}->
+            Temp = OxygenList ++ [Element],
+            io:format("Oxigênios prontos para reagir ~p~n~n",[Temp]),
+            water(HydrogenList,Temp);
+
+        {Element,hydrogen}->
+            Temp = HydrogenList ++ [Element],
+            io:format("Hidrogênios prontos para reagir ~p~n~n",[Temp]),
+            water(Temp,OxygenList)
     end.
 
-makeWater(H1,H2,O) ->
-    io:format("Os Hidrogênios ~p e ~p ~n criaram agua junto do Oxigênio ~p~n",[[H1],[H2],[O]]).
-
+%%Função Inicial
 discovery() ->
     io:format("Kepler-20PB foi descorberto!~n",[]),
     HydrogenList = [],OxygenList = [],
-    spawn(kepler,loop,[HydrogenList,OxygenList]).
+    WaterPid = spawn(kepler,water,[HydrogenList,OxygenList]),
+    spawn(kepler,loop,[WaterPid]).

@@ -1,6 +1,6 @@
 %%% cd ("Z:/Google Drive/Codigos/ProcessamentoParalelo/TrabII").
 
--module(kepler_bakup).
+-module(backup_kepler).
 -export([discovery/0, loop/2, generate/2, oxygen/2, hydrogen/2,makeWater/3]).
 
 loop(HydrogenList, OxygenList) ->
