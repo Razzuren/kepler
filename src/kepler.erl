@@ -62,8 +62,7 @@ water(HydrogenList,OxygenList) ->
                     %%Remove as moléculas de suas listas
                     TempHydrogen = lists:droplast(HydrogenList),
                     CleanHydrogenList = lists:droplast(TempHydrogen),
-                    TempOxygen = lists:droplast(OxygenList),
-                    CleanOxygenList = lists:reverse(TempOxygen),
+                    CleanOxygenList = lists:droplast(OxygenList),
 
                     io:format("Os Hidrogênios ~p e ~p ~n reagiram com Oxigênio ~p gerando água.~n~n",[[H1],[H2],[O]]),
 
