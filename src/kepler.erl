@@ -56,7 +56,7 @@ water(HydrogenList,OxygenList) ->
 
                     %%Moléculas que irão Reagir
                     H1 = lists:sublist(HydrogenList,1,1),
-                    H2 = lists:sublist(HydrogenList,2,2),
+                    H2 = lists:sublist(HydrogenList,2,1),
                     O = lists:sublist(OxygenList,1,1),
 
                     %%Remove as moléculas de suas listas
