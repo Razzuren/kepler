@@ -1,97 +1,73 @@
-%%% cd ("Z:/Google Drive/Codigos/ProcessamentoParalelo/TrabII").
+-module(planet).
+-export([start_simulation/0, main_loop/1, generate_molecule/1, oxygen/1, hydrogen/1, combine_molecules/2]).
 
--module(kepler).
--export([discovery/0, loop/1, generate/1, oxygen/1, hydrogen/1, water/2]).
+% Start the planet simulation
+start_simulation() ->
+    HydrogenList = [],
+    OxygenList = [],
+    WaterPid = spawn(planet, combine_molecules, [HydrogenList, OxygenList]),
+    spawn(planet, main_loop, [WaterPid]).
 
-%%Loop principal
-loop(WaterPid) ->
+% Main loop for the planet simulation
+main_loop(WaterPid) ->
+    % Define the time interval between the emergence of new molecules in milliseconds (minimum, maximum)
+    timer:sleep(crypto:rand_uniform(1000, 10001)),
+    Generator = spawn(planet, generate_molecule, [WaterPid]),
+    Generator ! {crypto:rand_uniform(1, 3)},
+    main_loop(WaterPid).
 
-    %% Define o intervalo de tempo entre o surgimento
-    %% de novas moléculas em milisegundos (minimo,máximo)
-    timer:sleep(crypto:rand_uniform(1000,10001)),
-
-    Generator = spawn(kepler,generate,[WaterPid]),
-    Generator ! {crypto:rand_uniform(1,3)}.
-
-%%Função que gera aleatoriamente
-%% moléculas de Oxigênio ou Hidrogênio
-generate(WaterPid) ->
+% Function that generates molecules randomly
+generate_molecule(WaterPid) ->
     receive
         {1} ->
-            [spawn(kepler,oxygen,[WaterPid])];
+            spawn(planet, oxygen, [WaterPid]);
 
         {2} ->
-            [spawn(kepler,hydrogen,[WaterPid])]
+            spawn(planet, hydrogen, [WaterPid])
     end.
 
-%%Função Oxigênio
+% Function representing oxygen molecule
 oxygen(WaterPid) ->
     Pid = self(),
-    io:format("Oxigênio ~p foi gerado !~n~n",[self()]),
-    loop(WaterPid),
-    timer:sleep(crypto:rand_uniform(10000,30001)),
-    WaterPid ! {Pid,oxygen}.
+    io:format("Oxygen molecule ~p was generated!~n~n", [Pid]),
+    main_loop(WaterPid),
+    timer:sleep(crypto:rand_uniform(10000, 30001)),
+    WaterPid ! {Pid, oxygen}.
 
-%%Função Hidrogênio
+% Function representing hydrogen molecule
 hydrogen(WaterPid) ->
     Pid = self(),
-    io:format("Hidrogênio ~p foi gerado !~n~n",[self()]),
-    loop(WaterPid),
-    timer:sleep(crypto:rand_uniform(10000,30001)),
-    WaterPid ! {Pid,hydrogen}.
+    io:format("Hydrogen molecule ~p was generated!~n~n", [Pid]),
+    main_loop(WaterPid),
+    timer:sleep(crypto:rand_uniform(10000, 30001)),
+    WaterPid ! {Pid, hydrogen}.
 
-%%Função que combina as moléculas
-water(HydrogenList,OxygenList) ->
-
-    Length = lists:flatlength(HydrogenList),
-    Lenght2 = lists:flatlength(OxygenList),
-
-    if
-        %%Se há dois higrogênios prontos para reagir
-        Length >= 2  ->
-
-            if
-                %%Se há ao menos 1 oxigênio para reagir
-                Lenght2 >=1 ->
-
-                    %%Moléculas que irão Reagir
-                    H1 = lists:sublist(HydrogenList,1,1),
-                    H2 = lists:sublist(HydrogenList,2,1),
-                    O = lists:sublist(OxygenList,1,1),
-
-                    %%Remove as moléculas de suas listas
-                    TempHydrogen = lists:droplast(HydrogenList),
-                    CleanHydrogenList = lists:droplast(TempHydrogen),
-                    CleanOxygenList = lists:droplast(OxygenList),
-
-                    io:format("Os Hidrogênios ~p e ~p ~n reagiram com Oxigênio ~p gerando água.~n~n",[[H1],[H2],[O]]),
-
-                    %%Loop da Geração de Água
-                    water(CleanHydrogenList,CleanOxygenList);
-
-                true ->
-                    io:format("~n",[])
+% Function that combines molecules to form water
+combine_molecules(HydrogenList, OxygenList) ->
+    case {length(HydrogenList), length(OxygenList)} of
+        {Length, _} when Length >= 2 ->
+            case length(OxygenList) of
+                Length2 when Length2 >= 1 ->
+                    H1 = hd(HydrogenList),
+                    H2 = hd(tl(HydrogenList)),
+                    O = hd(OxygenList),
+                    TempHydrogen = tl(tl(HydrogenList)),
+                    TempOxygen = tl(OxygenList),
+                    io:format("Hydrogen molecules ~p and ~p reacted with Oxygen molecule ~p, producing water.~n~n", [H1, H2, O]),
+                    combine_molecules(TempHydrogen, TempOxygen);
+                _ ->
+                    ok
             end;
-        true ->
-            io:format("~n",[])
-
+        _ ->
+            ok
     end,
-
     receive
-        {Element,oxygen}->
+        {Element, oxygen} ->
             Temp = OxygenList ++ [Element],
-            io:format("Oxigênios prontos para reagir ~p~n~n",[Temp]),
-            water(HydrogenList,Temp);
-
-        {Element,hydrogen}->
+            io:format("Oxygen molecules ready to react: ~p~n~n", [Temp]),
+            combine_molecules(HydrogenList, Temp);
+        {Element, hydrogen} ->
             Temp = HydrogenList ++ [Element],
-            io:format("Hidrogênios prontos para reagir ~p~n~n",[Temp]),
-            water(Temp,OxygenList)
+            io:format("Hydrogen molecules ready to react: ~p~n~n", [Temp]),
+            combine_molecules(Temp, OxygenList)
     end.
-
-%%Função Inicial
-discovery() ->
-    io:format("Kepler-20PB foi descorberto!~n",[]),
-    HydrogenList = [],OxygenList = [],
-    WaterPid = spawn(kepler,water,[HydrogenList,OxygenList]),
-    spawn(kepler,loop,[WaterPid]).
